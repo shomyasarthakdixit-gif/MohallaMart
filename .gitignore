@@ -1,8 +1,25 @@
+# Node
 node_modules/
-.env
-.DS_Store
+
+# Build
+.next/
 dist/
 build/
-.next/
-coverage/
+
+# Environment
+.env
+.env.local
+.env.*
+
+# Logs
 *.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# Prisma
+prisma/dev.db
