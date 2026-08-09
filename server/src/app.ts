@@ -1,17 +1,18 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
+
+import v1Router from "./routes/v1";
+import { env } from "./config/env";
 
 const app = express();
 
 app.use(cors());
 app.use(helmet());
-app.use(morgan('dev'));
+app.use(morgan("dev"));
 app.use(express.json());
 
-app.get('/api/v1/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'MohallaMart API is running' });
-});
+app.use("/api/v1", v1Router);
 
 export default app;

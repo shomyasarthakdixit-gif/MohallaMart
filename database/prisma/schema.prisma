@@ -1,0 +1,183 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id          String   @id @default(uuid())
+  firebaseUid String?  @unique
+  email       String?  @unique
+  phone       String?  @unique
+  name        String?
+  avatarUrl   String?
+  role        String   @default("CUSTOMER")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  addresses Address[]
+  orders    Order[]
+  shops     Shop[]    @relation("OwnerToShop")
+  cart      Cart?
+  notifications Notification[]
+}
+
+model Address {
+  id        String   @id @default(uuid())
+  userId    String
+  lat       Float
+  lng       Float
+  text      String
+  type      String   // e.g., Home, Work
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Shop {
+  id          String   @id @default(uuid())
+  ownerId     String
+  name        String
+  description String?
+  latitude    Float?
+  longitude   Float?
+  address     String?
+  isActive    Boolean  @default(true)
+  openTime    String?
+  closeTime   String?
+  status               String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  scheduledDeliveryFee Float    @default(20)
+  expressDeliveryFee   Float    @default(50)
+  deliveryRadius       Float    @default(5)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  owner    User      @relation("OwnerToShop", fields: [ownerId], references: [id])
+  products Product[]
+  orders   Order[]
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  shopId      String
+  categoryId  String
+  name        String
+  description String?
+  price       Float
+  stock       Int      @default(0)
+  image       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  shop       Shop        @relation(fields: [shopId], references: [id])
+  category   Category    @relation(fields: [categoryId], references: [id])
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+}
+
+model Cart {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User       @relation(fields: [userId], references: [id])
+  items CartItem[]
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  productId String
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart    Cart    @relation(fields: [cartId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model Order {
+  id           String       @id @default(uuid())
+  userId       String
+  shopId       String
+  status       String       @default("PENDING")
+  deliveryType String       @default("SCHEDULED")
+  totalAmount  Float
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  user       User        @relation(fields: [userId], references: [id])
+  shop       Shop        @relation(fields: [shopId], references: [id])
+  items      OrderItem[]
+  payment    Payment?
+  delivery   Delivery?
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  orderId   String   @unique
+  amount            Float
+  status            String   // PENDING, SUCCESS, FAILED, REFUNDED
+  method            String   // RAZORPAY, CASH
+  providerOrderId   String?  // Razorpay order_id
+  providerPaymentId String?  // Razorpay payment_id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+model Delivery {
+  id               String   @id @default(uuid())
+  orderId          String   @unique
+  deliveryBoy      String?
+  deliveryBoyPhone String?
+  status           String   // ASSIGNED, PICKED_UP, DELIVERED
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("SYSTEM") // ORDER_UPDATE, SYSTEM, PROMO
+  isRead    Boolean  @default(false)
+  link      String?  // Optional link to redirect user when clicked
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id])
+}
