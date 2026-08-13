@@ -24,6 +24,36 @@ export const getProductsByShopId = async (req: Request, res: Response) => {
   }
 };
 
+export const getProductById = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { id } = req.params;
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        shop: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+            openTime: true,
+            closeTime: true
+          }
+        }
+      }
+    });
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    return res.status(200).json({ product });
+  } catch (error) {
+    console.error("getProductById error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 export const getMyProducts = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;

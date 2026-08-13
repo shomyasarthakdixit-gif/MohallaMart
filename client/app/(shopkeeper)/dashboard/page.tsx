@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, ShoppingBag, Package, TrendingUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useState } from "react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
 
 interface Order {
   id: string;
@@ -21,6 +23,8 @@ interface Product {
 }
 
 export default function ShopkeeperDashboard() {
+  const [windowStr, setWindowStr] = useState("7d");
+
   const { data: orders = [], isLoading, error } = useQuery({
     queryKey: ["shopOrders"],
     queryFn: async () => {
@@ -35,6 +39,14 @@ export default function ShopkeeperDashboard() {
       }
     },
     refetchInterval: 5000, // Auto-refresh every 5s for new orders
+  });
+
+  const { data: analytics = [] } = useQuery({
+    queryKey: ["shopAnalytics", windowStr],
+    queryFn: async () => {
+      const res = await api.get(`/orders/shop/analytics?window=${windowStr}`);
+      return res.data.chartData;
+    },
   });
 
   const { data: products = [] } = useQuery({
@@ -105,34 +117,55 @@ export default function ShopkeeperDashboard() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="lg:col-span-4">
-          <CardHeader>
-            <CardTitle>Recent Orders</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 border-b mb-4">
+            <CardTitle>Sales Trend</CardTitle>
+            <div className="flex gap-2">
+              {["7d", "21d", "30d", "6m", "1y"].map(w => (
+                <button
+                  key={w}
+                  onClick={() => setWindowStr(w)}
+                  className={`text-xs px-2 py-1 rounded ${windowStr === w ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}
+                >
+                  {w}
+                </button>
+              ))}
+            </div>
           </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="text-muted-foreground">Loading orders...</div>
-            ) : orders.length === 0 ? (
-              <div className="text-muted-foreground">No recent orders.</div>
-            ) : (
-              <div className="space-y-4">
-                {orders.slice(0, 5).map(order => (
-                  <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg bg-card">
-                    <div>
-                      <div className="font-semibold text-sm truncate max-w-[150px] sm:max-w-[200px]">Order #{order.id.slice(-6).toUpperCase()}</div>
-                      <div className="text-sm text-muted-foreground">{order.items.length} items • ₹{order.totalAmount}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className={`text-xs font-medium px-2 py-1 rounded inline-block ${order.status === 'PENDING' ? 'bg-secondary/20 text-secondary-foreground' : 'bg-primary/20 text-primary'}`}>
-                        {order.status}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={analytics}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
+                <XAxis 
+                  dataKey="date" 
+                  tickFormatter={(val) => {
+                    const date = new Date(val);
+                    return `${date.getDate()}/${date.getMonth()+1}`;
+                  }} 
+                  tick={{fontSize: 12}} 
+                  stroke="var(--muted-foreground)"
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis 
+                  tick={{fontSize: 12}} 
+                  stroke="var(--muted-foreground)"
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(val) => `₹${val}`}
+                />
+                <RechartsTooltip 
+                  contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '8px', color: 'var(--foreground)' }}
+                  itemStyle={{ color: 'var(--primary)' }}
+                />
+                <Area type="monotone" dataKey="revenue" stroke="var(--primary)" fillOpacity={1} fill="url(#colorRevenue)" strokeWidth={3} activeDot={{r: 6, fill: 'var(--primary)', stroke: 'var(--background)', strokeWidth: 2}} />
+              </AreaChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
         
@@ -159,6 +192,38 @@ export default function ShopkeeperDashboard() {
           </CardContent>
         </Card>
       </div>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Orders</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="text-muted-foreground">Loading orders...</div>
+          ) : orders.length === 0 ? (
+            <div className="text-muted-foreground">No recent orders.</div>
+          ) : (
+            <div className="space-y-4">
+              {orders.slice(0, 5).map(order => (
+                <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg bg-card">
+                  <div>
+                    <div className="font-semibold text-sm truncate max-w-[150px] sm:max-w-[200px]">Order #{order.id.slice(-6).toUpperCase()}</div>
+                    <div className="text-sm text-muted-foreground">{order.items.length} items • ₹{order.totalAmount}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className={`text-xs font-medium px-2 py-1 rounded inline-block ${order.status === 'PENDING' ? 'bg-secondary/20 text-secondary-foreground' : 'bg-primary/20 text-primary'}`}>
+                      {order.status}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

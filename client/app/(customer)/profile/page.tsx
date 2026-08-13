@@ -4,16 +4,18 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, MapPin, Edit3, Trash2, Plus, ArrowLeft, LogOut, Package, CreditCard, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import MapPickerDynamic from "@/components/ui/MapPickerDynamic";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function CustomerProfile() {
   const { user, logout } = useAuthStore();
+  const { t, language, setLanguage } = useLanguage();
   const [activeTab, setActiveTab] = useState("addresses");
   const queryClient = useQueryClient();
 
@@ -26,6 +28,14 @@ export default function CustomerProfile() {
     queryFn: async () => {
       const res = await api.get("/users/addresses");
       return res.data.addresses;
+    }
+  });
+
+  const { data: insights } = useQuery({
+    queryKey: ["userInsights"],
+    queryFn: async () => {
+      const res = await api.get("/users/me/insights");
+      return res.data.insights;
     }
   });
 
@@ -73,6 +83,7 @@ export default function CustomerProfile() {
     { id: "orders", icon: Package, label: "My Orders", desc: "View past and active orders" },
     { id: "addresses", icon: MapPin, label: "Saved Addresses", desc: "Manage delivery locations" },
     { id: "payments", icon: CreditCard, label: "Payment Methods", desc: "Saved cards and UPI" },
+    { id: "settings", icon: Languages, label: "Language", desc: "Change language settings" },
   ];
 
   return (
@@ -105,6 +116,25 @@ export default function CustomerProfile() {
             <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1 bg-secondary/15 text-secondary-foreground text-xs font-bold uppercase tracking-wider rounded-full">
               Verified User
             </div>
+
+            {insights && (
+              <div className="w-full mt-6 grid grid-cols-2 gap-4 border-t border-border/50 pt-6">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Total Spent</p>
+                  <p className="text-xl font-bold text-primary mt-1">₹{insights.totalSpent}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Orders</p>
+                  <p className="text-xl font-bold mt-1">{insights.totalOrders}</p>
+                </div>
+                {insights.favoriteShop && (
+                  <div className="col-span-2 bg-muted/30 rounded-xl p-3 mt-2">
+                     <p className="text-xs text-muted-foreground">Favorite Shop</p>
+                     <p className="text-sm font-semibold truncate">{insights.favoriteShop}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="bg-card border border-border/50 rounded-3xl shadow-sm overflow-hidden flex flex-col divide-y divide-border/30">
@@ -232,7 +262,46 @@ export default function CustomerProfile() {
               </motion.div>
             )}
 
-            {activeTab !== "addresses" && (
+            {activeTab === "settings" && (
+              <motion.div
+                key="settings"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-6"
+              >
+                <h3 className="text-2xl font-bold tracking-tight">Settings</h3>
+                <Card className="rounded-3xl border-border/50 shadow-sm overflow-hidden">
+                  <CardHeader className="bg-muted/30 border-b border-border/50">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Languages className="w-5 h-5 text-primary" />
+                      Language
+                    </CardTitle>
+                    <CardDescription>Choose your preferred language</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="flex gap-4">
+                      <Button 
+                        variant={language === "en" ? "default" : "outline"}
+                        className={language === "en" ? "font-bold shadow-md" : ""}
+                        onClick={() => setLanguage("en")}
+                      >
+                        English
+                      </Button>
+                      <Button 
+                        variant={language === "hi" ? "default" : "outline"}
+                        className={language === "hi" ? "font-bold shadow-md" : ""}
+                        onClick={() => setLanguage("hi")}
+                      >
+                        हिन्दी
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {activeTab !== "addresses" && activeTab !== "settings" && (
               <motion.div
                 key={activeTab}
                 initial={{ opacity: 0, y: 10 }}

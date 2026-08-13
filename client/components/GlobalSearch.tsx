@@ -2,16 +2,18 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, Store, Package, ArrowRight } from "lucide-react";
+import { Search, X, Store, Package, ArrowRight, Mic } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useVoiceRecognition } from "@/hooks/useVoiceRecognition";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
-interface Shop {
+interface SearchResult {
   id: string;
-  name: string;
-  address: string;
+  type: "shop" | "product";
+  title: string;
+  subtitle: string;
 }
 
 export function GlobalSearch() {
@@ -19,6 +21,13 @@ export function GlobalSearch() {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  const handleVoiceResult = (transcript: string) => {
+    setQuery(transcript);
+    setIsOpen(true);
+  };
+
+  const { isListening, supported, toggleListening } = useVoiceRecognition(handleVoiceResult);
 
   // Keyboard shortcut to open search (Ctrl+K or Cmd+K)
   useEffect(() => {
@@ -35,33 +44,80 @@ export function GlobalSearch() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Focus input when opened
+  // Focus input when opened and clear query when closed
   useEffect(() => {
     if (isOpen && inputRef.current) {
       setTimeout(() => inputRef.current?.focus(), 100);
+    } else if (!isOpen) {
+      setQuery("");
     }
   }, [isOpen]);
 
-  const { data: shops = [] } = useQuery({
-    queryKey: ["allShopsSearch"],
-    queryFn: async () => {
+  const debouncedQuery = useDebounce(query, 300);
+  const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
+
+  useEffect(() => {
+    const locStr = localStorage.getItem("mohallamart_location");
+    if (locStr) {
       try {
-        const res = await api.get("/shops/nearby");
-        return res.data.shops as Shop[];
+        const parsed = JSON.parse(locStr);
+        if (!parsed.skipped) setLocation(parsed);
+      } catch (e) {}
+    }
+  }, []);
+
+  const { data: searchResults = [], isLoading } = useQuery({
+    queryKey: ["globalSearch", debouncedQuery, location?.lat, location?.lng],
+    queryFn: async () => {
+      if (!debouncedQuery) return [];
+      try {
+        let urlShop = `/search?q=${encodeURIComponent(debouncedQuery)}&type=shop`;
+        let urlProduct = `/search?q=${encodeURIComponent(debouncedQuery)}&type=product`;
+        
+        if (location) {
+          urlShop += `&lat=${location.lat}&lng=${location.lng}`;
+          urlProduct += `&lat=${location.lat}&lng=${location.lng}`;
+        }
+        
+        const [shopRes, productRes] = await Promise.all([
+          api.get(urlShop),
+          api.get(urlProduct)
+        ]);
+
+        const shops = (shopRes.data.results || []).slice(0, 3).map((shop: any) => ({
+          id: shop.id,
+          type: "shop",
+          title: shop.name,
+          subtitle: shop.address,
+        }));
+
+        const products = (productRes.data.results || []).slice(0, 5).map((product: any) => ({
+          id: product.id,
+          type: "product",
+          title: product.name,
+          subtitle: product.shop?.name || "Local Shop",
+        }));
+
+        return [...shops, ...products] as SearchResult[];
       } catch (e) {
         return [];
       }
-    }
+    },
+    enabled: !!debouncedQuery,
   });
 
-  const searchResults = shops
-    .filter(shop => query && (shop.name.toLowerCase().includes(query.toLowerCase()) || shop.address.toLowerCase().includes(query.toLowerCase())))
-    .map(shop => ({
-      id: shop.id,
-      type: "shop",
-      title: shop.name,
-      subtitle: shop.address,
-    }));
+  function useDebounce(value: string, delay: number) {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+    useEffect(() => {
+      const handler = setTimeout(() => {
+        setDebouncedValue(value);
+      }, delay);
+      return () => {
+        clearTimeout(handler);
+      };
+    }, [value, delay]);
+    return debouncedValue;
+  }
 
   return (
     <>
@@ -116,9 +172,21 @@ export function GlobalSearch() {
                   placeholder="What are you looking for? Press Enter to search..."
                   className="w-full h-14 bg-transparent border-none outline-none pl-14 pr-12 text-xl font-medium placeholder:text-muted-foreground/50"
                 />
+
+                {supported && (
+                  <button
+                    onClick={() => toggleListening()}
+                    className={`absolute right-16 p-2 rounded-full transition-colors ${
+                      isListening ? "bg-red-500/10 text-red-500 animate-pulse" : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+                    }`}
+                  >
+                    <Mic className="h-6 w-6" />
+                  </button>
+                )}
+
                 <button 
                   onClick={() => setIsOpen(false)}
-                  className="absolute right-4 p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors"
+                  className="absolute right-6 p-2 bg-muted/50 text-muted-foreground rounded-full hover:bg-muted hover:text-foreground transition-colors"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -130,6 +198,11 @@ export function GlobalSearch() {
                   <div className="p-10 flex flex-col items-center justify-center text-muted-foreground/50 h-64">
                     <Search className="h-12 w-12 mb-4 opacity-20" />
                     <p className="text-lg">Start typing to search...</p>
+                  </div>
+                ) : isLoading ? (
+                  <div className="p-10 flex flex-col items-center justify-center text-muted-foreground/50 h-64">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+                    <p className="text-lg">Searching...</p>
                   </div>
                 ) : searchResults.length > 0 ? (
                   <div className="p-2 space-y-1">

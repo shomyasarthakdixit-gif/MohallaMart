@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Poppins, Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "../components/providers";
@@ -15,9 +15,19 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
+export const viewport: Viewport = {
+  themeColor: "#16a34a",
+};
+
 export const metadata: Metadata = {
   title: "MohallaMart",
-  description: "Your hyperlocal neighborhood marketplace",
+  description: "Your local neighbourhood marketplace",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "MohallaMart",
+  },
 };
 
 export default function RootLayout({

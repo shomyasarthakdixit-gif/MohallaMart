@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect, Suspense, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Store, Package, Filter, ArrowUpDown } from "lucide-react";
+import { Store, Package, Filter, Mic, X } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useVoiceRecognition } from "@/hooks/useVoiceRecognition";
 
 interface SearchResult {
   id: string;
@@ -22,10 +23,19 @@ interface SearchResult {
 function SearchContent() {
   const searchParams = useSearchParams();
   const q = searchParams.get("q") || "";
+  const router = useRouter();
   
+  const [query, setQuery] = useState(q);
   const [activeTab, setActiveTab] = useState<"product" | "shop">("product");
   const [sortBy, setSortBy] = useState<string>("relevance");
   const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
+
+  const handleVoiceResult = useCallback((transcript: string) => {
+    setQuery(transcript);
+    router.push(`/search?q=${encodeURIComponent(transcript)}`);
+  }, [router]);
+
+  const { isListening, supported, toggleListening } = useVoiceRecognition(handleVoiceResult);
 
   useEffect(() => {
     const locStr = localStorage.getItem("mohallamart_location");
@@ -52,9 +62,20 @@ function SearchContent() {
 
   return (
     <div className="container mx-auto p-4 space-y-6 animate-in fade-in duration-500 pb-24 max-w-5xl">
-      <div>
+      <div className="relative">
         <h1 className="text-2xl font-bold tracking-tight">Search Results for "{q}"</h1>
         <p className="text-muted-foreground text-sm">Showing results within your delivery area</p>
+        
+        {supported && (
+          <button
+            onClick={() => toggleListening()}
+            className={`absolute right-0 top-0 p-2 rounded-full transition-colors ${
+              isListening ? "bg-red-500/10 text-red-500 animate-pulse" : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+            }`}
+          >
+            <Mic className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">

@@ -12,6 +12,7 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import Link from "next/link";
+import { ReviewSection } from "@/components/ReviewSection";
 
 interface Product {
   id: string;
@@ -206,6 +207,8 @@ export default function ShopDetailsPage() {
           </div>
         )}
       </div>
+
+      <ReviewSection shopId={shop.id} title="Shop Reviews" />
 
       {/* Floating Cart Summary */}
       {totalItems > 0 && (

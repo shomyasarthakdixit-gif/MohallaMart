@@ -1,3 +1,5 @@
+"use client";
+
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Store, ShoppingCart, User, Package } from "lucide-react";
 import Link from "next/link";
@@ -5,12 +7,16 @@ import { LogoutButton } from "@/components/logout-button";
 import { GlobalCartDrawer } from "@/components/GlobalCartDrawer";
 import { NotificationDropdown } from "@/components/ui/NotificationDropdown";
 import { SearchBar } from "@/components/ui/SearchBar";
+import { AIAssistantWidget } from "@/components/AIAssistantWidget";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function CustomerLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { t } = useLanguage();
+
   return (
     <div className="min-h-screen flex bg-background">
       {/* Sidebar for Desktop */}
@@ -24,16 +30,16 @@ export default function CustomerLayout({
         
         <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
           <Link href="/home" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-            <Store className="h-5 w-5" /> Home
+            <Store className="h-5 w-5" /> {t("home")}
           </Link>
           <Link href="/orders" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-            <Package className="h-5 w-5" /> Orders
+            <Package className="h-5 w-5" /> {t("orders")}
           </Link>
           <Link href="/cart" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-            <ShoppingCart className="h-5 w-5" /> Cart
+            <ShoppingCart className="h-5 w-5" /> {t("cart")}
           </Link>
           <Link href="/profile" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-            <User className="h-5 w-5" /> Profile
+            <User className="h-5 w-5" /> {t("profile")}
           </Link>
         </nav>
 
@@ -80,24 +86,25 @@ export default function CustomerLayout({
       </div>
 
       <GlobalCartDrawer />
+      <AIAssistantWidget />
 
       {/* Mobile Bottom Navigation */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur h-16 flex items-center justify-around px-2 pb-safe">
         <Link href="/home" className="flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary">
           <Store className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Home</span>
+          <span className="text-[10px] font-medium">{t("home")}</span>
         </Link>
         <Link href="/orders" className="flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary">
           <Package className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Orders</span>
+          <span className="text-[10px] font-medium">{t("orders")}</span>
         </Link>
         <Link href="/cart" className="flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary relative">
           <ShoppingCart className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Cart</span>
+          <span className="text-[10px] font-medium">{t("cart")}</span>
         </Link>
         <Link href="/profile" className="flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary">
           <User className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Profile</span>
+          <span className="text-[10px] font-medium">{t("profile")}</span>
         </Link>
         <LogoutButton showText={false} className="flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-destructive" />
       </nav>

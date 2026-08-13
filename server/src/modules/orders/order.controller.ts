@@ -5,7 +5,7 @@ import { paymentService } from "../payments/payment.service";
 export const createOrder = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
-    const { deliveryType, paymentMethod, deliveryAddressId } = req.body;
+    const { deliveryType, paymentMethod, deliveryAddressId, couponCode, useLoyaltyPoints } = req.body;
 
     if (!userId) {
       res.status(401).json({ success: false, message: "Unauthorized" });
@@ -113,6 +113,48 @@ export const createOrder = async (req: Request, res: Response) => {
       });
     }
 
+    let discountAmount = 0;
+    
+    if (couponCode) {
+      const coupon = await prisma.coupon.findUnique({ where: { code: couponCode.toUpperCase() } });
+      if (
+        coupon && 
+        coupon.isActive && 
+        (!coupon.expiryDate || new Date() <= new Date(coupon.expiryDate)) && 
+        grandTotal >= coupon.minOrderAmount
+      ) {
+         if (coupon.discountType === "PERCENTAGE") {
+            discountAmount += (grandTotal * coupon.discountValue) / 100;
+         } else {
+            discountAmount += coupon.discountValue;
+         }
+      }
+    }
+
+    // Loyalty Points Logic
+    let pointsToDeduct = 0;
+    if (useLoyaltyPoints) {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (user && user.loyaltyPoints > 0) {
+        // 100 points = 5 Rupees (so 1 point = 0.05 Rupees)
+        const pointsDiscount = user.loyaltyPoints * 0.05;
+        // Don't discount more than the grandTotal
+        if (pointsDiscount > grandTotal - discountAmount) {
+          const maxDiscountPossible = grandTotal - discountAmount;
+          pointsToDeduct = Math.floor(maxDiscountPossible / 0.05);
+          discountAmount += maxDiscountPossible;
+        } else {
+          pointsToDeduct = user.loyaltyPoints;
+          discountAmount += pointsDiscount;
+        }
+      }
+    }
+
+    discountAmount = Math.min(discountAmount, grandTotal);
+    grandTotal -= discountAmount;
+
+    let originalGrandTotal = grandTotal + discountAmount;
+
     let paymentOrder = null;
     if (paymentMethod === "ONLINE") {
       try {
@@ -131,6 +173,12 @@ export const createOrder = async (req: Request, res: Response) => {
     
     // 4. Create DB orders and deduct stock
     for (const shopData of shopOrderData) {
+      // Pro-rata discount distribution
+      if (discountAmount > 0) {
+        const proportion = shopData.totalAmount / originalGrandTotal;
+        shopData.totalAmount -= (discountAmount * proportion);
+      }
+
       // Deduct stock
       for (const item of shopData.orderItemsData) {
         await prisma.product.update({
@@ -176,6 +224,14 @@ export const createOrder = async (req: Request, res: Response) => {
           }
         });
       }
+    }
+
+    // Deduct points
+    if (pointsToDeduct > 0) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { loyaltyPoints: { decrement: pointsToDeduct } }
+      });
     }
 
     // 4. Clear the cart
@@ -290,6 +346,18 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
       data: { status },
     });
 
+    // Award loyalty points if delivered
+    if (status === "DELIVERED") {
+      // 1 point per 100 rupees
+      const pointsToAward = Math.floor(updatedOrder.totalAmount / 100);
+      if (pointsToAward > 0) {
+        await prisma.user.update({
+          where: { id: order.userId },
+          data: { loyaltyPoints: { increment: pointsToAward } }
+        });
+      }
+    }
+
     // Create Notification for Customer
     await prisma.notification.create({
       data: {
@@ -303,7 +371,70 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
 
     res.json({ success: true, order: updatedOrder });
   } catch (error) {
-    console.error("Error updating order:", error);
+    console.error("Error updating order status:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const getShopAnalytics = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const shop = await prisma.shop.findFirst({ where: { ownerId: userId } });
+    if (!shop) return res.status(404).json({ success: false, message: "Shop not found" });
+
+    const windowMap: Record<string, number> = {
+      "7d": 7,
+      "21d": 21,
+      "30d": 30,
+      "6m": 180,
+      "1y": 365
+    };
+    
+    const windowStr = (req.query.window as string) || "7d";
+    const days = windowMap[windowStr] || 7;
+    
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const orders = await prisma.order.findMany({
+      where: { 
+        shopId: shop.id, 
+        createdAt: { gte: startDate } 
+      },
+      include: {
+        payment: { select: { amount: true } }
+      }
+    });
+
+    // Group by day
+    const chartDataMap: Record<string, { date: string; revenue: number; orders: number }> = {};
+    
+    // Initialize map with all days in range to ensure no gaps
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      chartDataMap[dateStr] = { date: dateStr, revenue: 0, orders: 0 };
+    }
+
+    orders.forEach(order => {
+      const dateStr = new Date(order.createdAt).toISOString().split('T')[0];
+      if (chartDataMap[dateStr]) {
+        chartDataMap[dateStr].orders++;
+        if (order.status !== 'REJECTED' && order.status !== 'CANCELLED') {
+           chartDataMap[dateStr].revenue += (order.payment?.amount || order.totalAmount);
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      chartData: Object.values(chartDataMap)
+    });
+  } catch (error) {
+    console.error("Error fetching shop analytics:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };

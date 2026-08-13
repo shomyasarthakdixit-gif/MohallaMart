@@ -6,6 +6,7 @@ export const getNearbyShops = async (req: Request, res: Response) => {
     const { lat, lng } = req.query;
 
     const shops = await prisma.shop.findMany({
+      where: { status: "APPROVED", isActive: true },
       include: {
         owner: {
           select: { name: true, phone: true }
@@ -55,8 +56,12 @@ export const getNearbyShops = async (req: Request, res: Response) => {
 export const getShopById = async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
-    const shop = await prisma.shop.findUnique({
-      where: { id },
+    const shop = await prisma.shop.findFirst({
+      where: { 
+        id, 
+        status: "APPROVED", 
+        isActive: true 
+      },
       include: {
         owner: {
           select: { name: true, phone: true }

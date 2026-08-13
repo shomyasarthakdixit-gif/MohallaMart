@@ -53,7 +53,8 @@ export default function CustomerOrderDetailsPage() {
       const res = await api.get(`/orders/${id}`);
       return res.data.order as Order;
     },
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
+      const data = query.state.data as Order | undefined;
       // Keep refetching every 5 seconds until delivered or rejected
       if (data?.status === "DELIVERED" || data?.status === "REJECTED" || data?.status === "CANCELLED") {
         return false;

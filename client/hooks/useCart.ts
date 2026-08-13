@@ -15,6 +15,8 @@ export interface CartItem {
       id: string;
       name: string;
       address: string;
+      scheduledDeliveryFee?: number;
+      expressDeliveryFee?: number;
     };
   };
 }

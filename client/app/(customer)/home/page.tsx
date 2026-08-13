@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MapPin, Search, Navigation, Store, ArrowRight } from "lucide-react";
+import { MapPin, Search, Navigation, Store, ArrowRight, Sparkles, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
@@ -20,6 +20,14 @@ interface Shop {
   address: string;
 }
 
+interface RecommendedProduct {
+  id: string;
+  name: string;
+  price: number;
+  image: string | null;
+  shop: { name: string; id: string };
+}
+
 export default function CustomerHome() {
   const { user } = useAuthStore();
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -33,6 +41,19 @@ export default function CustomerHome() {
       const res = await api.get(`/shops/nearby${query}`);
       return res.data.shops as Shop[];
     },
+  });
+
+  const { data: recommendationsData, isLoading: isLoadingRecommendations } = useQuery({
+    queryKey: ["aiRecommendations"],
+    queryFn: async () => {
+      try {
+        const res = await api.get(`/ai/recommendations`);
+        return res.data; // { recommendations: [], title: string }
+      } catch (e) {
+        return { recommendations: [], title: "Trending Products" };
+      }
+    },
+    retry: false,
   });
 
   const requestLocation = () => {
@@ -146,6 +167,50 @@ export default function CustomerHome() {
           ))}
         </div>
       </section>
+
+      {/* AI Recommendations */}
+      {recommendationsData?.recommendations && recommendationsData.recommendations.length > 0 && (
+        <section>
+          <div className="flex items-center gap-2 mb-6">
+            <div className="bg-gradient-to-r from-violet-500 to-fuchsia-500 p-1.5 rounded-lg text-white shadow-lg">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <h3 className="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-violet-500 to-fuchsia-500">
+              {recommendationsData.title}
+            </h3>
+          </div>
+          
+          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x">
+            {recommendationsData.recommendations.map((product: RecommendedProduct) => (
+              <motion.div 
+                key={product.id} 
+                whileHover={{ y: -5 }}
+                className="min-w-[180px] sm:min-w-[200px] snap-start"
+              >
+                <Link href={`/product/${product.id}`}>
+                  <Card className="h-full glass border-border/50 hover:border-primary/50 transition-colors shadow-md rounded-2xl overflow-hidden">
+                    <div className="h-32 bg-muted relative overflow-hidden flex items-center justify-center group">
+                      {product.image ? (
+                        <img src={product.image} alt={product.name} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      ) : (
+                        <ShoppingBag className="h-10 w-10 text-muted-foreground/30 group-hover:scale-110 transition-transform duration-500" />
+                      )}
+                      <div className="absolute top-2 right-2 bg-background/80 backdrop-blur text-[10px] font-bold px-2 py-1 rounded-full text-primary">
+                        Top Pick
+                      </div>
+                    </div>
+                    <CardContent className="p-4">
+                      <h4 className="font-semibold truncate text-sm">{product.name}</h4>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">{product.shop.name}</p>
+                      <div className="mt-2 font-bold text-base">₹{product.price}</div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Nearby Shops */}
       <section>

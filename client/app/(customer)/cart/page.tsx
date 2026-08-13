@@ -16,6 +16,13 @@ export default function CartPage() {
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "ONLINE">("ONLINE");
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState("");
+  const [useLoyaltyPoints, setUseLoyaltyPoints] = useState(false);
+  
   const router = useRouter();
   const { cart, isLoading, clearCart } = useCart();
 
@@ -29,6 +36,14 @@ export default function CartPage() {
     }
   });
 
+  const { data: userProfile } = useQuery({
+    queryKey: ["userProfile"],
+    queryFn: async () => {
+      const res = await api.get("/users/me");
+      return res.data.user;
+    }
+  });
+
   const handleCheckout = async () => {
     if (items.length === 0) return;
     if (!selectedAddressId) {
@@ -38,11 +53,12 @@ export default function CartPage() {
     
     setIsSubmitting(true);
     try {
-      // The backend uses the DB cart automatically!
       const { data } = await api.post("/orders", {
         deliveryType,
         paymentMethod,
-        deliveryAddressId: selectedAddressId
+        deliveryAddressId: selectedAddressId,
+        couponCode: appliedCoupon?.code,
+        useLoyaltyPoints
       });
       
       if (paymentMethod === "ONLINE" && data.paymentOrder) {
@@ -150,10 +166,46 @@ export default function CartPage() {
   });
 
   const totalDeliveryFee = deliveryType === "EXPRESS" ? totalExpressFee : totalScheduledFee;
-  const total = subtotal + totalDeliveryFee;
+  let total = subtotal + totalDeliveryFee;
+  let loyaltyDiscount = 0;
+  
+  if (appliedCoupon) {
+    total = Math.max(0, total - appliedCoupon.discountAmount);
+  }
+  
+  if (useLoyaltyPoints && userProfile?.loyaltyPoints > 0) {
+    const pointsDiscount = userProfile.loyaltyPoints * 0.05; // 100 points = 5 Rs
+    loyaltyDiscount = Math.min(pointsDiscount, total);
+    total = Math.max(0, total - loyaltyDiscount);
+  }
+
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponError("");
+    try {
+      const res = await api.post("/coupons/validate", {
+        code: couponCode,
+        orderAmount: subtotal + totalDeliveryFee
+      });
+      setAppliedCoupon(res.data.coupon);
+    } catch (err: any) {
+      setCouponError(err.response?.data?.message || "Invalid coupon code");
+      setAppliedCoupon(null);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponError("");
+  };
 
   return (
     <div className="container mx-auto p-4 space-y-6 max-w-2xl animate-in slide-in-from-right duration-300 pb-20">
+      {/* @ts-ignore - Next.js Script props type mismatch in current version */}
       <Script src="https://checkout.razorpay.com/v1/checkout.js" />
       <Link href="/home" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground">
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
@@ -311,6 +363,53 @@ export default function CartPage() {
             <span className="text-muted-foreground">Delivery Fees ({Object.keys(itemsByShop).length} shops)</span>
             <span>₹{totalDeliveryFee}</span>
           </div>
+
+          <div className="pt-2">
+            {!appliedCoupon ? (
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  value={couponCode} 
+                  onChange={e => setCouponCode(e.target.value)} 
+                  placeholder="Promo Code" 
+                  className="flex-1 bg-muted px-3 py-2 rounded-lg text-sm uppercase outline-none focus:ring-1 focus:ring-primary"
+                />
+                <Button variant="secondary" size="sm" onClick={applyCoupon} disabled={couponLoading || !couponCode}>
+                  {couponLoading ? "..." : "Apply"}
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-2 rounded-lg text-sm font-medium border border-emerald-500/20">
+                <div className="flex items-center gap-1">
+                  <Zap className="h-4 w-4" /> {appliedCoupon.code} Applied
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>-₹{appliedCoupon.discountAmount}</span>
+                  <button onClick={removeCoupon} className="hover:text-emerald-800 dark:hover:text-emerald-200">
+                     <span className="text-lg leading-none">&times;</span>
+                  </button>
+                </div>
+              </div>
+            )}
+            {couponError && <p className="text-red-500 text-xs mt-1">{couponError}</p>}
+          </div>
+
+          {userProfile?.loyaltyPoints > 0 && (
+            <div className="flex items-center justify-between pt-3 border-t">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={useLoyaltyPoints}
+                  onChange={(e) => setUseLoyaltyPoints(e.target.checked)}
+                  className="rounded text-primary focus:ring-primary"
+                />
+                <span className="font-medium">Use {userProfile.loyaltyPoints} Loyalty Points</span>
+                <span className="text-muted-foreground text-xs">(Value: ₹{userProfile.loyaltyPoints * 0.05})</span>
+              </label>
+              {useLoyaltyPoints && <span className="text-emerald-600 dark:text-emerald-400 font-medium">-₹{loyaltyDiscount}</span>}
+            </div>
+          )}
+
           <div className="border-t pt-3 mt-2 flex justify-between font-bold text-xl">
             <span>Total to pay</span>
             <span className="text-primary">₹{total}</span>

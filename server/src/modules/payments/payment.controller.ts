@@ -1,13 +1,15 @@
 import { Request, Response } from "express";
 import { prisma } from "database";
 import { paymentService } from "./payment.service";
+import crypto from "crypto";
 
-export const verifyPayment = async (req: Request, res: Response) => {
+export const verifyPayment = async (req: Request, res: Response): Promise<void> => {
   try {
     const { orderIds, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
     if (!orderIds || !Array.isArray(orderIds)) {
-      return res.status(400).json({ success: false, message: "Invalid orderIds" });
+      res.status(400).json({ success: false, message: "Invalid orderIds" });
+      return;
     }
 
     const isValid = await paymentService.getProvider().verifyPayment({
@@ -26,16 +28,68 @@ export const verifyPayment = async (req: Request, res: Response) => {
           providerPaymentId: razorpay_payment_id
         }
       });
-      return res.json({ success: true, message: "Payment verified successfully" });
+      res.json({ success: true, message: "Payment verified successfully" });
     } else {
       await prisma.payment.updateMany({
         where: { orderId: { in: orderIds } },
         data: { status: "FAILED" }
       });
-      return res.status(400).json({ success: false, message: "Payment verification failed" });
+      res.status(400).json({ success: false, message: "Payment verification failed" });
     }
   } catch (error) {
     console.error("Error verifying payment:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const handleWebhook = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    if (!secret) {
+      console.warn("RAZORPAY_WEBHOOK_SECRET is not set");
+      res.status(500).json({ success: false, message: "Webhook secret missing" });
+      return;
+    }
+
+    const signature = req.headers["x-razorpay-signature"];
+    if (!signature || typeof signature !== "string") {
+      res.status(400).json({ success: false, message: "Missing signature" });
+      return;
+    }
+
+    const bodyStr = JSON.stringify(req.body);
+    const expectedSignature = crypto
+      .createHmac("sha256", secret)
+      .update(bodyStr)
+      .digest("hex");
+
+    if (expectedSignature !== signature) {
+      res.status(400).json({ success: false, message: "Invalid signature" });
+      return;
+    }
+
+    const event = req.body.event;
+    const payment = req.body.payload?.payment?.entity;
+
+    if (event === "payment.captured" || event === "order.paid") {
+      const orderId = payment?.order_id;
+      if (orderId) {
+        const dbPayment = await prisma.payment.findFirst({
+          where: { providerOrderId: orderId }
+        });
+        
+        if (dbPayment && dbPayment.status !== "SUCCESS") {
+          await prisma.payment.update({
+            where: { id: dbPayment.id },
+            data: { status: "SUCCESS" }
+          });
+        }
+      }
+    }
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("Webhook processing error:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };

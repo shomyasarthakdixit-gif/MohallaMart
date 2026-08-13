@@ -156,7 +156,7 @@ export default function SettingsPage() {
                 <div className="bg-background/50 p-2 rounded-xl border border-border/50">
                   <MapPickerDynamic 
                     initialPosition={{ lat: formData.latitude, lng: formData.longitude }}
-                    onLocationSelect={(lat, lng, addressText) => {
+                    onLocationSelect={(lat: number, lng: number, addressText: string) => {
                       setFormData(prev => ({ ...prev, latitude: lat, longitude: lng, address: addressText }));
                     }}
                   />

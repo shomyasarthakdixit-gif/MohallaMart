@@ -24,6 +24,10 @@ interface Order {
   createdAt: string;
   user: { name: string; phone: string };
   items: OrderItem[];
+  payment?: {
+    method: string;
+    status: string;
+  };
 }
 
 const STATUS_GROUPS = {

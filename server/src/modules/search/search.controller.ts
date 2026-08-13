@@ -66,8 +66,8 @@ export const globalSearch = async (req: Request, res: Response) => {
         shopId: { in: nearbyShopIds },
         isActive: true,
         OR: [
-          { name: { contains: q, mode: 'insensitive' } },
-          { description: { contains: q, mode: 'insensitive' } }
+          { name: { contains: q } },
+          { description: { contains: q } }
         ]
       };
 
