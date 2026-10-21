@@ -8,6 +8,8 @@ import { Store, Package, Filter, Mic, X } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useVoiceRecognition } from "@/hooks/useVoiceRecognition";
+import { ProductCard } from "@/components/product/ProductCard";
+import { ShopCard } from "@/components/shop/ShopCard";
 
 interface SearchResult {
   id: string;
@@ -122,43 +124,14 @@ function SearchContent() {
             <p className="text-muted-foreground mt-1">Try adjusting your search or location</p>
           </div>
         ) : (
-          <div className={`grid gap-4 ${activeTab === 'shop' ? 'md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'}`}>
+          <div className={`grid gap-4 sm:gap-6 ${activeTab === 'shop' ? 'md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'}`}>
             {data.map((item) => (
               activeTab === 'product' ? (
-                <Link key={item.id} href={`/product/${item.id}`} className="group relative bg-card border border-border/50 rounded-2xl overflow-hidden hover:shadow-lg transition-all hover:border-primary/30 flex flex-col">
-                  <div className="aspect-square bg-muted/30 relative flex items-center justify-center p-4">
-                    {item.image ? (
-                      <img src={item.image} alt={item.name} className="object-contain w-full h-full group-hover:scale-105 transition-transform" />
-                    ) : (
-                      <Package className="h-16 w-16 text-muted-foreground/20" />
-                    )}
-                    {item.category && (
-                      <span className="absolute top-2 right-2 text-[10px] font-bold px-2 py-1 bg-background/80 backdrop-blur rounded-full uppercase tracking-wider text-muted-foreground border">
-                        {item.category.name}
-                      </span>
-                    )}
-                  </div>
-                  <div className="p-4 flex-1 flex flex-col">
-                    <h3 className="font-semibold text-base line-clamp-1 group-hover:text-primary transition-colors">{item.name}</h3>
-                    <p className="text-muted-foreground text-xs line-clamp-1 mt-0.5">{item.shop?.name}</p>
-                    <div className="mt-auto pt-3 flex items-center justify-between">
-                      <span className="font-bold text-lg">₹{item.price}</span>
-                      <Button size="sm" className="h-8 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white">Add</Button>
-                    </div>
-                  </div>
-                </Link>
+                <div key={item.id} className="h-full">
+                  <ProductCard product={item as any} />
+                </div>
               ) : (
-                <Link key={item.id} href={`/shop/${item.id}`} className="group bg-card border border-border/50 rounded-2xl p-5 hover:shadow-lg transition-all hover:border-secondary/30 flex flex-col gap-3">
-                  <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary shrink-0 group-hover:scale-110 transition-transform">
-                      <Store className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-lg group-hover:text-secondary transition-colors line-clamp-1">{item.name}</h3>
-                      <p className="text-muted-foreground text-xs line-clamp-2 mt-1">{item.address}</p>
-                    </div>
-                  </div>
-                </Link>
+                <ShopCard key={item.id} shop={item as any} />
               )
             ))}
           </div>

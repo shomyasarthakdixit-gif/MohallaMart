@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { prisma } from "database";
+import { getPagination, getPagingData } from "../../utils/pagination";
 
 // Haversine formula to calculate distance between two coordinates in km
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -26,10 +27,24 @@ export const globalSearch = async (req: Request, res: Response) => {
     const searchType = type === "shop" ? "shop" : "product";
     const userLat = lat ? parseFloat(lat as string) : null;
     const userLng = lng ? parseFloat(lng as string) : null;
+    const { skip, take, page } = getPagination(req);
+    const safeTake = Math.min(take, 100);
 
-    // 1. Find all active shops
+    let baseShopWhere: any = { status: "APPROVED", isActive: true };
+
+    // Bounding box pre-filter to prevent fetching the entire shop table
+    if (userLat !== null && userLng !== null && !isNaN(userLat) && !isNaN(userLng)) {
+      const maxRadiusKm = 50; // Safe upper bound for local commerce
+      const latDelta = maxRadiusKm / 111;
+      const lngDelta = maxRadiusKm / (111 * Math.cos(userLat * (Math.PI / 180)));
+      
+      baseShopWhere.latitude = { gte: userLat - latDelta, lte: userLat + latDelta };
+      baseShopWhere.longitude = { gte: userLng - lngDelta, lte: userLng + lngDelta };
+    }
+
+    // 1. Find all active shops (within bounding box if location provided)
     const allShops = await prisma.shop.findMany({
-      where: { status: "APPROVED", isActive: true },
+      where: baseShopWhere,
       include: {
         owner: { select: { name: true, phone: true } }
       }
@@ -56,7 +71,16 @@ export const globalSearch = async (req: Request, res: Response) => {
         shop.name.toLowerCase().includes(q.toLowerCase()) || 
         (shop.description && shop.description.toLowerCase().includes(q.toLowerCase()))
       );
-      res.json({ success: true, type: "shop", results: matchedShops });
+      
+      // Manual pagination for shops since they are filtered in memory
+      const paginatedShops = matchedShops.slice(skip, skip + safeTake);
+      
+      res.json({ 
+        success: true, 
+        type: "shop", 
+        results: paginatedShops,
+        pagination: getPagingData(matchedShops.length, page, safeTake)
+      });
       return;
     } 
     
@@ -79,16 +103,26 @@ export const globalSearch = async (req: Request, res: Response) => {
       if (sortBy === "price_asc") orderBy = { price: 'asc' };
       if (sortBy === "price_desc") orderBy = { price: 'desc' };
 
-      const products = await prisma.product.findMany({
-        where: whereClause,
-        include: {
-          category: true,
-          shop: { select: { name: true, id: true, address: true } }
-        },
-        orderBy
-      });
+      const [products, totalItems] = await Promise.all([
+        prisma.product.findMany({
+          where: whereClause,
+          skip,
+          take: safeTake,
+          include: {
+            category: true,
+            shop: { select: { name: true, id: true, address: true } }
+          },
+          orderBy
+        }),
+        prisma.product.count({ where: whereClause })
+      ]);
 
-      res.json({ success: true, type: "product", results: products });
+      res.json({ 
+        success: true, 
+        type: "product", 
+        results: products,
+        pagination: getPagingData(totalItems, page, safeTake)
+      });
       return;
     }
 

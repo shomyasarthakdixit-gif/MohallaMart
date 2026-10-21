@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
+import { getPagination, getPagingData } from "../../utils/pagination";
 
 const prisma = new PrismaClient();
 
@@ -53,18 +54,31 @@ export const getReviews = async (req: Request, res: Response): Promise<any> => {
       return res.status(400).json({ message: "Must provide shopId or productId to fetch reviews" });
     }
 
-    const reviews = await prisma.review.findMany({
-      where: {
-        ...(shopId ? { shopId: String(shopId) } : {}),
-        ...(productId ? { productId: String(productId) } : {})
-      },
-      include: {
-        user: { select: { name: true, avatarUrl: true } }
-      },
-      orderBy: { createdAt: "desc" }
-    });
+    const { skip, take, page, limit } = getPagination(req);
+    const safeTake = Math.min(take, 1000);
 
-    return res.status(200).json({ reviews });
+    const whereClause = {
+      ...(shopId ? { shopId: String(shopId) } : {}),
+      ...(productId ? { productId: String(productId) } : {})
+    };
+
+    const [reviews, totalItems] = await Promise.all([
+      prisma.review.findMany({
+        where: whereClause,
+        skip,
+        take: safeTake,
+        include: {
+          user: { select: { name: true, avatarUrl: true } }
+        },
+        orderBy: { createdAt: "desc" }
+      }),
+      prisma.review.count({ where: whereClause })
+    ]);
+
+    return res.status(200).json({ 
+      reviews,
+      pagination: getPagingData(totalItems, page, safeTake)
+    });
   } catch (error) {
     console.error("Get reviews error:", error);
     return res.status(500).json({ message: "Internal server error" });

@@ -69,10 +69,9 @@ export default function ProductDetailsPage() {
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="bg-card border border-border/50 rounded-3xl p-8 sm:p-12 shadow-xl flex items-center justify-center aspect-square relative overflow-hidden group"
+          className="bg-surface border border-border rounded-3xl p-8 sm:p-12 shadow-sm flex items-center justify-center aspect-square relative overflow-hidden group"
         >
-          <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 to-transparent opacity-50"></div>
-          <ShoppingBag className="h-32 w-32 text-muted-foreground/30 group-hover:scale-110 transition-transform duration-500" />
+          <ShoppingBag className="h-32 w-32 text-muted-foreground/20 group-hover:scale-105 transition-transform duration-500" />
         </motion.div>
 
         {/* Product Details Section */}
@@ -83,7 +82,7 @@ export default function ProductDetailsPage() {
         >
           <div>
             <div className="text-sm font-bold uppercase tracking-wider text-primary mb-2">{product.category?.name || "Grocery"}</div>
-            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4 leading-tight">{product.name}</h1>
+            <h1 className="text-3xl sm:text-5xl font-serif font-bold tracking-tight mb-4 leading-tight text-foreground">{product.name}</h1>
             <div className="flex items-end gap-3 mb-6">
               <span className="font-extrabold text-4xl text-foreground">₹{product.price}</span>
               <span className="text-lg text-muted-foreground line-through mb-1 opacity-70">₹{Math.floor(product.price * 1.2)}</span>
@@ -94,14 +93,14 @@ export default function ProductDetailsPage() {
           </div>
 
           <div className="pt-6 border-t border-border/50">
-            <h3 className="text-lg font-bold mb-4">Sold by</h3>
+            <h3 className="text-lg font-bold mb-4 font-serif">Sold by</h3>
             <Link href={`/shop/${product.shop.id}`}>
-              <div className="bg-muted/30 p-4 rounded-2xl flex items-center gap-4 hover:bg-muted/50 transition-colors cursor-pointer border border-border/50 hover:border-primary/30">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Store className="h-6 w-6 text-primary" />
+              <div className="bg-surface border border-border p-4 rounded-2xl flex items-center gap-4 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group">
+                <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/5 transition-colors">
+                  <Store className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-bold">{product.shop.name}</h4>
+                  <h4 className="font-bold text-foreground group-hover:text-primary transition-colors">{product.shop.name}</h4>
                   <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                     <MapPin className="h-3 w-3" /> {product.shop.address}
                   </p>
@@ -139,16 +138,18 @@ export default function ProductDetailsPage() {
       {/* Floating Cart Summary */}
       {totalItems > 0 && (
         <div className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-40 animate-in slide-in-from-bottom-10">
-          <div className="bg-primary text-primary-foreground p-4 rounded-2xl shadow-2xl flex items-center justify-between border border-white/10">
+          <div className="bg-surface border border-border text-foreground p-4 rounded-2xl shadow-lg flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <ShoppingBag className="h-6 w-6" />
+              <div className="bg-primary/10 p-2 rounded-full">
+                <ShoppingBag className="h-5 w-5 text-primary" />
+              </div>
               <div>
-                <div className="font-bold text-lg leading-none">{totalItems} item{totalItems > 1 ? 's' : ''}</div>
-                <div className="text-sm opacity-90 mt-1 font-medium">₹{totalPrice} plus delivery</div>
+                <div className="font-bold">{totalItems} item{totalItems > 1 ? 's' : ''}</div>
+                <div className="text-xs text-muted-foreground font-medium">₹{totalPrice} plus delivery</div>
               </div>
             </div>
             <Link href="/cart">
-              <Button variant="secondary" className="font-bold rounded-full px-6">View Cart</Button>
+              <Button className="font-bold rounded-xl px-6">View Cart</Button>
             </Link>
           </div>
         </div>

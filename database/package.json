@@ -17,6 +17,7 @@
   "scripts": {
     "build": "tsc",
     "db:generate": "prisma generate",
+    "db:migrate:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed"
   },

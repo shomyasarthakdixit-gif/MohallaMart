@@ -1,23 +1,34 @@
 import { Request, Response } from "express";
 import { prisma } from "database";
 
+import { getPagination, getPagingData } from "../../utils/pagination";
+
 export const getProductsByShopId = async (req: Request, res: Response) => {
   try {
     const { shopId } = req.query;
+    const { skip, take, page, limit } = getPagination(req);
     
     if (!shopId || typeof shopId !== "string") {
       res.status(400).json({ success: false, message: "shopId query parameter is required" });
       return;
     }
 
-    const products = await prisma.product.findMany({
-      where: { shopId, isActive: true },
-      include: {
-        category: true
-      }
-    });
+    const where = { shopId, isActive: true };
+    const [products, totalItems] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        skip,
+        take,
+        include: { category: true }
+      }),
+      prisma.product.count({ where })
+    ]);
 
-    res.json({ success: true, products });
+    res.json({ 
+      success: true, 
+      products, 
+      pagination: getPagingData(totalItems, page, limit) 
+    });
   } catch (error) {
     console.error("Error fetching products:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
@@ -28,7 +39,7 @@ export const getProductById = async (req: Request, res: Response): Promise<any> 
   try {
     const { id } = req.params;
     const product = await prisma.product.findUnique({
-      where: { id },
+      where: { id: id as string },
       include: {
         category: true,
         shop: {
@@ -56,7 +67,7 @@ export const getProductById = async (req: Request, res: Response): Promise<any> 
 
 export const getMyProducts = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req.user?.id as string);
     if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
 
     const shop = await prisma.shop.findFirst({ where: { ownerId: userId } });
@@ -76,7 +87,7 @@ export const getMyProducts = async (req: Request, res: Response) => {
 
 export const createProduct = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req.user?.id as string);
     if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
 
     const shop = await prisma.shop.findFirst({ where: { ownerId: userId } });
@@ -117,7 +128,7 @@ export const createProduct = async (req: Request, res: Response) => {
 
 export const updateProduct = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req.user?.id as string);
     if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
 
     const shop = await prisma.shop.findFirst({ where: { ownerId: userId } });
@@ -139,7 +150,7 @@ export const updateProduct = async (req: Request, res: Response) => {
     }
 
     const product = await prisma.product.update({
-      where: { id },
+      where: { id: id as string },
       data: {
         name: name !== undefined ? name : existingProduct.name,
         description: description !== undefined ? description : existingProduct.description,
@@ -161,7 +172,7 @@ export const updateProduct = async (req: Request, res: Response) => {
 
 export const deleteProduct = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req.user?.id as string);
     if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
 
     const shop = await prisma.shop.findFirst({ where: { ownerId: userId } });
@@ -172,7 +183,7 @@ export const deleteProduct = async (req: Request, res: Response) => {
     const existingProduct = await prisma.product.findFirst({ where: { id, shopId: shop.id } });
     if (!existingProduct) return res.status(404).json({ success: false, message: "Product not found or unauthorized" });
 
-    await prisma.product.delete({ where: { id } });
+    await prisma.product.delete({ where: { id: id as string } });
 
     res.json({ success: true, message: "Product deleted successfully" });
   } catch (error) {

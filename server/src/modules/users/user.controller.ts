@@ -3,11 +3,11 @@ import { prisma } from "database";
 
 export const getProfile = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req.user?.id as string) as string;
     if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
 
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: userId as string },
       select: {
         id: true,
         name: true,
@@ -30,14 +30,14 @@ export const getProfile = async (req: Request, res: Response) => {
 
 export const getAddresses = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req.user?.id as string) as string;
     if (!userId) {
       res.status(401).json({ success: false, message: "Unauthorized" });
       return;
     }
 
     const addresses = await prisma.address.findMany({
-      where: { userId },
+      where: { userId: userId as string },
       orderBy: { createdAt: "desc" }
     });
     res.json({ success: true, addresses });
@@ -49,7 +49,7 @@ export const getAddresses = async (req: Request, res: Response) => {
 
 export const addAddress = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req.user?.id as string) as string;
     if (!userId) {
       res.status(401).json({ success: false, message: "Unauthorized" });
       return;
@@ -81,7 +81,7 @@ export const addAddress = async (req: Request, res: Response) => {
 
 export const deleteAddress = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req.user?.id as string) as string;
     if (!userId) {
       res.status(401).json({ success: false, message: "Unauthorized" });
       return;
@@ -89,13 +89,13 @@ export const deleteAddress = async (req: Request, res: Response) => {
 
     const { id } = req.params;
 
-    const address = await prisma.address.findUnique({ where: { id } });
+    const address = await prisma.address.findUnique({ where: { id: id as string } });
     if (!address || address.userId !== userId) {
       res.status(404).json({ success: false, message: "Address not found" });
       return;
     }
 
-    await prisma.address.delete({ where: { id } });
+    await prisma.address.delete({ where: { id: id as string } });
     res.json({ success: true, message: "Address deleted" });
   } catch (error) {
     console.error(error);
@@ -105,7 +105,7 @@ export const deleteAddress = async (req: Request, res: Response) => {
 
 export const getUserInsights = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req.user?.id as string) as string;
     if (!userId) {
       res.status(401).json({ success: false, message: "Unauthorized" });
       return;
@@ -129,7 +129,7 @@ export const getUserInsights = async (req: Request, res: Response) => {
         if (!shopCounts[order.shop.id]) {
           shopCounts[order.shop.id] = { count: 0, name: order.shop.name };
         }
-        shopCounts[order.shop.id].count++;
+        shopCounts[order.shop.id]!.count++;
       }
     });
 

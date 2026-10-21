@@ -15,6 +15,11 @@ import couponRoutes from "../../modules/coupons/coupon.routes";
 
 const router = Router();
 
+// Health check endpoint
+router.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 router.use("/auth", authRoute);
 router.use("/shops", shopRoute);
 router.use("/products", productRoute);

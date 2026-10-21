@@ -50,35 +50,27 @@ export function LocationRequestDialog({ onLocationGranted, onLocationDenied }: L
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-background/80 backdrop-blur-md"
+            transition={{ duration: 0.3 }}
+            className="absolute inset-0 bg-background/80"
           />
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-lg bg-card text-card-foreground shadow-2xl rounded-3xl overflow-hidden border border-border/50"
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ duration: 0.3 }}
+            className="relative w-full max-w-lg bg-surface text-foreground shadow-xl rounded-3xl overflow-hidden border border-border"
           >
-            {/* Animated Background Gradients */}
-            <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-br from-primary/20 via-secondary/20 to-background opacity-50 blur-3xl pointer-events-none" />
-            
-            <div className="p-8 flex flex-col items-center text-center relative z-10">
-              <motion.div 
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", delay: 0.2, bounce: 0.5 }}
-                className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mb-6 relative"
-              >
-                <div className="absolute inset-0 border-2 border-primary/30 rounded-full animate-ping opacity-20"></div>
-                <MapPin className="w-12 h-12 text-primary" />
-              </motion.div>
+            <div className="p-8 sm:p-10 flex flex-col items-center text-center relative z-10">
+              <div className="w-24 h-24 bg-primary/10 rounded-2xl flex items-center justify-center mb-8">
+                <MapPin className="w-10 h-10 text-primary" />
+              </div>
               
-              <h2 className="text-3xl font-extrabold tracking-tight mb-3">
+              <h2 className="text-3xl font-serif font-bold tracking-tight mb-4 text-foreground">
                 Discover Nearby Shops
               </h2>
               <p className="text-muted-foreground text-lg mb-8 leading-relaxed max-w-sm">
@@ -87,12 +79,12 @@ export function LocationRequestDialog({ onLocationGranted, onLocationDenied }: L
 
               {error && (
                 <motion.div 
-                  initial={{ opacity: 0, y: -10 }}
+                  initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="w-full bg-destructive/10 text-destructive text-sm p-3 rounded-lg flex items-center gap-2 mb-6"
+                  className="w-full bg-destructive/10 text-destructive text-sm p-4 rounded-xl flex items-center justify-center gap-2 mb-6"
                 >
                   <ShieldAlert className="w-4 h-4 shrink-0" />
-                  <span>{error}</span>
+                  <span className="font-medium">{error}</span>
                 </motion.div>
               )}
 
@@ -101,7 +93,7 @@ export function LocationRequestDialog({ onLocationGranted, onLocationDenied }: L
                   size="lg" 
                   onClick={handleRequestLocation} 
                   disabled={isLocating}
-                  className="w-full h-14 text-lg rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(var(--primary),0.3)] transition-all"
+                  className="w-full h-14 text-lg rounded-xl shadow-md hover:shadow-lg font-bold"
                 >
                   {isLocating ? (
                     <motion.div 
@@ -120,7 +112,7 @@ export function LocationRequestDialog({ onLocationGranted, onLocationDenied }: L
                   variant="ghost" 
                   size="lg" 
                   onClick={handleSkip}
-                  className="w-full h-14 text-muted-foreground hover:text-foreground rounded-xl"
+                  className="w-full h-14 text-muted-foreground hover:text-foreground font-medium rounded-xl"
                 >
                   Maybe Later
                 </Button>

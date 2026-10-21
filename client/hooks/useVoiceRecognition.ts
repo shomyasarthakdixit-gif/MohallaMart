@@ -77,6 +77,7 @@ export function useVoiceRecognition(onResult?: (transcript: string) => void) {
           setIsListening(false);
         };
 
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setRecognition(rec);
       } else {
         setSupported(false);
@@ -91,6 +92,7 @@ export function useVoiceRecognition(onResult?: (transcript: string) => void) {
       recognition.stop();
       setIsListening(false);
     } else {
+      // eslint-disable-next-line react-hooks/immutability
       recognition.lang = lang; // Allow dynamic switching (en-IN or hi-IN)
       try {
         recognition.start();

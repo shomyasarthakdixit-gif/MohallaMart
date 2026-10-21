@@ -51,12 +51,44 @@ export class RazorpayPaymentProvider implements PaymentProvider {
       if (params.amount) {
         await this.razorpay.payments.refund(params.paymentId, { amount: params.amount });
       } else {
-        await this.razorpay.payments.refund(params.paymentId);
+        await this.razorpay.payments.refund(params.paymentId, {});
       }
       return true;
     } catch (error) {
       console.error("[RazorpayPaymentProvider] Error processing refund:", error);
       return false;
     }
+  }
+
+  verifyWebhook(signature: string, body: string, secret?: string): boolean {
+    const webhookSecret = secret || process.env.RAZORPAY_WEBHOOK_SECRET || "";
+    if (!webhookSecret) return false;
+    
+    try {
+      const expectedSignature = crypto
+        .createHmac("sha256", webhookSecret)
+        .update(body)
+        .digest("hex");
+      return expectedSignature === signature;
+    } catch (error) {
+      console.error("[RazorpayPaymentProvider] Error verifying webhook signature:", error);
+      return false;
+    }
+  }
+
+  parseWebhookEvent(body: any): any {
+    if (!body || !body.event) return null;
+    
+    const event = body.event;
+    const payment = body.payload?.payment?.entity;
+    const orderId = payment?.order_id;
+    const paymentId = payment?.id;
+
+    return {
+      event,
+      orderId,
+      paymentId,
+      payload: body,
+    };
   }
 }

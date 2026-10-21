@@ -37,7 +37,7 @@ Return ONLY a valid JSON object in the following format:
     
     let result;
     try {
-      result = JSON.parse(jsonStr);
+      result = JSON.parse(jsonStr as string);
       if (!result.searchTerms || !Array.isArray(result.searchTerms)) {
         result.searchTerms = [];
       }
@@ -52,7 +52,7 @@ Return ONLY a valid JSON object in the following format:
     }
 
     // Now query the database for matching products
-    let products = [];
+    let products: any[] = [];
     if (result.searchTerms.length > 0) {
       products = await prisma.product.findMany({
         where: {
@@ -90,7 +90,7 @@ export const getRecommendations = async (req: Request, res: Response): Promise<a
     }
 
     const orders = await prisma.order.findMany({
-      where: { userId },
+      where: { userId: userId as string },
       include: { items: { include: { product: true } } },
       take: 5,
       orderBy: { createdAt: 'desc' }
@@ -112,7 +112,7 @@ export const getRecommendations = async (req: Request, res: Response): Promise<a
       const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```\n([\s\S]*?)\n```/);
       const jsonStr = jsonMatch ? jsonMatch[1] : text.trim();
       try {
-        searchTerms = JSON.parse(jsonStr);
+        searchTerms = JSON.parse(jsonStr as string);
       } catch (e) {
         console.error("Failed to parse recommendations JSON", text);
       }

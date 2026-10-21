@@ -44,35 +44,31 @@ export const verifyPayment = async (req: Request, res: Response): Promise<void> 
 
 export const handleWebhook = async (req: Request, res: Response): Promise<void> => {
   try {
-    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
-    if (!secret) {
-      console.warn("RAZORPAY_WEBHOOK_SECRET is not set");
-      res.status(500).json({ success: false, message: "Webhook secret missing" });
-      return;
-    }
-
-    const signature = req.headers["x-razorpay-signature"];
+    const signature = req.headers["x-razorpay-signature"] || req.headers["x-mock-signature"];
     if (!signature || typeof signature !== "string") {
       res.status(400).json({ success: false, message: "Missing signature" });
       return;
     }
 
     const bodyStr = JSON.stringify(req.body);
-    const expectedSignature = crypto
-      .createHmac("sha256", secret)
-      .update(bodyStr)
-      .digest("hex");
+    const provider = paymentService.getProvider();
+    
+    const isValid = provider.verifyWebhook(signature, bodyStr);
 
-    if (expectedSignature !== signature) {
+    if (!isValid) {
       res.status(400).json({ success: false, message: "Invalid signature" });
       return;
     }
 
-    const event = req.body.event;
-    const payment = req.body.payload?.payment?.entity;
+    const parsedEvent = provider.parseWebhookEvent(req.body);
+    
+    if (!parsedEvent) {
+      res.status(400).json({ success: false, message: "Invalid webhook payload" });
+      return;
+    }
 
-    if (event === "payment.captured" || event === "order.paid") {
-      const orderId = payment?.order_id;
+    if (parsedEvent.event === "payment.captured" || parsedEvent.event === "order.paid") {
+      const orderId = parsedEvent.orderId;
       if (orderId) {
         const dbPayment = await prisma.payment.findFirst({
           where: { providerOrderId: orderId }

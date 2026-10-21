@@ -1,27 +1,26 @@
 import type { Metadata, Viewport } from "next";
-import { Poppins, Inter } from "next/font/google";
+import { Instrument_Serif, Manrope } from "next/font/google";
 import "./globals.css";
 import { Providers } from "../components/providers";
-import { PageTransition } from "../components/page-transition";
 
-const poppins = Poppins({
-  weight: ["300", "400", "500", "600", "700"],
+const instrumentSerif = Instrument_Serif({
+  weight: ["400"],
   subsets: ["latin"],
-  variable: "--font-poppins",
+  variable: "--font-instrument-serif",
 });
 
-const inter = Inter({
+const manrope = Manrope({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-manrope",
 });
 
 export const viewport: Viewport = {
-  themeColor: "#16a34a",
+  themeColor: "#245C4A",
 };
 
 export const metadata: Metadata = {
-  title: "MohallaMart",
-  description: "Your local neighbourhood marketplace",
+  title: "MohallaMart - Your Neighbourhood, One Tap Away",
+  description: "Fresh groceries, daily essentials and more from trusted local shops near you.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -36,12 +35,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${poppins.variable} ${inter.variable} h-full antialiased font-sans`}>
-      <body className="min-h-full flex flex-col">
+    <html lang="en" suppressHydrationWarning className={`${instrumentSerif.variable} ${manrope.variable} h-full antialiased font-sans`}>
+      <body className="min-h-full flex flex-col font-sans selection:bg-primary/20">
         <Providers>
-          <PageTransition>
-            {children}
-          </PageTransition>
+          {children}
         </Providers>
       </body>
     </html>

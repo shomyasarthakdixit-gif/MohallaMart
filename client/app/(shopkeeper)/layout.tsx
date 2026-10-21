@@ -1,87 +1,60 @@
-import { ThemeToggle } from "@/components/theme-toggle";
-import { Store, Package, ShoppingBag, LayoutDashboard, Settings, LogOut } from "lucide-react";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
+import { ShopkeeperSidebar } from "@/components/shopkeeper/layout/ShopkeeperSidebar";
+import { ShopkeeperHeader } from "@/components/shopkeeper/layout/ShopkeeperHeader";
 import Link from "next/link";
-import { LogoutButton } from "@/components/logout-button";
-import { NotificationDropdown } from "@/components/ui/NotificationDropdown";
+import { LayoutDashboard, ShoppingBag, Package } from "lucide-react";
 
 export default function ShopkeeperLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="min-h-screen flex bg-background">
-      {/* Sidebar for Desktop */}
-      <aside className="hidden md:flex w-64 flex-col border-r bg-card">
-        <div className="h-14 flex items-center px-4 border-b">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <Store className="h-6 w-6 text-primary" />
-            <span className="font-bold text-lg">Shopkeeper Panel</span>
-          </Link>
-        </div>
-        
-        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
-          <Link href="/dashboard" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-            <LayoutDashboard className="h-5 w-5" /> Dashboard
-          </Link>
-          <Link href="/dashboard/orders" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-            <ShoppingBag className="h-5 w-5" /> Orders
-          </Link>
-          <Link href="/dashboard/products" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-            <Package className="h-5 w-5" /> Products
-          </Link>
-          <Link href="/dashboard/settings" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-            <Settings className="h-5 w-5" /> Settings
-          </Link>
-        </nav>
+  const { user, isLoading, hasHydrated } = useAuthStore();
+  const router = useRouter();
 
-        <div className="p-4 border-t">
-          <LogoutButton />
-        </div>
-      </aside>
+  useEffect(() => {
+    if (hasHydrated && !isLoading && (!user || user.role !== "SHOPKEEPER")) {
+      router.replace("/");
+    }
+  }, [user, isLoading, hasHydrated, router]);
+
+  if (!hasHydrated || (!user || user.role !== "SHOPKEEPER")) {
+    return null; // prevent flashing
+  }
+
+  return (
+    <div className="min-h-screen flex bg-background font-sans text-foreground selection:bg-primary/20 selection:text-primary">
+      {/* Sidebar for Desktop */}
+      <ShopkeeperSidebar />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        <header className="h-14 flex items-center justify-between border-b px-4 bg-background z-10 sticky top-0">
-          <div className="flex items-center gap-2 md:hidden">
-            <Store className="h-6 w-6 text-primary" />
-            <span className="font-bold text-lg">MohallaMart</span>
-          </div>
-          <div className="flex-1"></div>
-          <div className="flex items-center space-x-2">
-            <NotificationDropdown />
-            <Link href="/dashboard/orders" className="p-2 hover:bg-accent rounded-full text-muted-foreground hover:text-primary transition-colors hidden sm:flex">
-              <ShoppingBag className="h-5 w-5" />
-            </Link>
-            <Link href="/dashboard/products" className="p-2 hover:bg-accent rounded-full text-muted-foreground hover:text-primary transition-colors hidden sm:flex">
-              <Package className="h-5 w-5" />
-            </Link>
-            <Link href="/dashboard/settings" className="p-2 hover:bg-accent rounded-full text-muted-foreground hover:text-primary transition-colors hidden sm:flex">
-              <Settings className="h-5 w-5" />
-            </Link>
-            <LogoutButton showText={false} className="p-2 hover:bg-destructive/10 rounded-full text-muted-foreground hover:text-destructive transition-colors hidden sm:flex" />
-            <ThemeToggle />
-          </div>
-        </header>
+      <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
+        <ShopkeeperHeader />
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-muted/20">
-          {children}
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10 bg-background md:bg-muted/10">
+          <div className="max-w-7xl mx-auto w-full">
+            {children}
+          </div>
         </main>
       </div>
 
-      {/* Mobile Bottom Nav (simplified for shopkeeper) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur h-16 flex items-center justify-around px-4 pb-safe">
-         <Link href="/dashboard" className="flex flex-col items-center gap-1 text-primary">
+      {/* Mobile Bottom Nav */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/50 bg-surface/95 backdrop-blur-md h-16 flex items-center justify-around px-2 pb-safe shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)]">
+         <Link href="/dashboard" className="flex flex-col items-center gap-1 p-2 rounded-xl text-primary hover:bg-primary/5 transition-colors">
           <LayoutDashboard className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Dash</span>
+          <span className="text-[10px] font-bold tracking-wider">Dash</span>
         </Link>
-        <Link href="/dashboard/orders" className="flex flex-col items-center gap-1 text-muted-foreground">
+        <Link href="/dashboard/orders" className="flex flex-col items-center gap-1 p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
           <ShoppingBag className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Orders</span>
+          <span className="text-[10px] font-bold tracking-wider">Orders</span>
         </Link>
-        <Link href="/dashboard/products" className="flex flex-col items-center gap-1 text-muted-foreground">
+        <Link href="/dashboard/products" className="flex flex-col items-center gap-1 p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
           <Package className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Items</span>
+          <span className="text-[10px] font-bold tracking-wider">Items</span>
         </Link>
       </nav>
     </div>

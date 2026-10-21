@@ -23,3 +23,9 @@ Thumbs.db
 
 # Prisma
 prisma/dev.db
+
+# Scratch and reports
+client/parse.py
+client/lint_output.txt
+client/eslint-report.json
+server/fix.js

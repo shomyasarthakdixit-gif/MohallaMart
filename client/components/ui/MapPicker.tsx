@@ -23,7 +23,7 @@ interface MapPickerProps {
 }
 
 // Component to handle map clicks
-const MapEvents = ({ setPosition, fetchAddress }: { setPosition: any, fetchAddress: any }) => {
+const MapEvents = ({ setPosition, fetchAddress }: { setPosition: (pos: L.LatLng) => void, fetchAddress: (lat: number, lng: number) => void }) => {
   useMapEvents({
     click(e) {
       setPosition(e.latlng);
@@ -34,7 +34,7 @@ const MapEvents = ({ setPosition, fetchAddress }: { setPosition: any, fetchAddre
 };
 
 // Component to center map when position changes
-const MapCenter = ({ position }: { position: any }) => {
+const MapCenter = ({ position }: { position: L.LatLngExpression | null }) => {
   const map = useMap();
   useEffect(() => {
     if (position) {

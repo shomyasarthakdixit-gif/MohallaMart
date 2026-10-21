@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { env } from "../config/env";
+import { logger } from "../utils/logger";
 
 export const errorHandler = (
   err: any,
@@ -8,7 +9,8 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ): void => {
-  console.error("Unhandled error:", err);
+  logger.error(`${err.statusCode || 500} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
+  logger.error(err.stack || err);
 
   // If it's a Zod validation error
   if (err instanceof z.ZodError) {

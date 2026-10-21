@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Star, MessageSquare } from "lucide-react";
+import { Star, MessageSquare, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Review {
@@ -72,7 +72,7 @@ export function ReviewSection({ productId, shopId, title = "Reviews" }: ReviewSe
       return (
         <Star
           key={index}
-          className={`h-5 w-5 ${interactive ? 'cursor-pointer' : ''} ${starValue <= ratingValue ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`}
+          className={`h-5 w-5 ${interactive ? 'cursor-pointer hover:scale-110 transition-transform' : ''} ${starValue <= ratingValue ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`}
           onClick={() => interactive && setRating(starValue)}
         />
       );
@@ -80,30 +80,32 @@ export function ReviewSection({ productId, shopId, title = "Reviews" }: ReviewSe
   };
 
   return (
-    <div className="space-y-8 mt-12 border-t border-border/50 pt-10">
-      <h3 className="text-2xl font-bold">{title} ({reviews.length})</h3>
+    <div className="space-y-8 mt-12 border-t border-border pt-10">
+      <h3 className="text-3xl font-serif font-bold text-foreground">{title} <span className="text-muted-foreground font-sans text-xl font-normal ml-2">({reviews.length})</span></h3>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-1">
-          <div className="bg-muted/30 p-6 rounded-2xl border border-border/50">
-            <h4 className="font-semibold mb-4">Write a Review</h4>
-            <form onSubmit={submitReview} className="space-y-4">
+          <div className="bg-surface p-6 rounded-3xl border border-border">
+            <h4 className="font-semibold text-lg mb-6">Write a Review</h4>
+            <form onSubmit={submitReview} className="space-y-5">
               <div>
-                <label className="text-sm text-muted-foreground block mb-2">Rating</label>
-                <div className="flex gap-1">
+                <label className="text-sm font-medium text-foreground block mb-2">Rating</label>
+                <div className="flex gap-1.5">
                   {renderStars(rating, true)}
                 </div>
               </div>
               <div>
-                <label className="text-sm text-muted-foreground block mb-2">Review (optional)</label>
+                <label htmlFor="review-comment" className="text-sm font-medium text-foreground block mb-2">Review (optional)</label>
                 <textarea 
+                  id="review-comment"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  className="w-full h-24 bg-background border border-border/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none resize-none"
+                  className="w-full h-28 bg-background border border-border rounded-xl p-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/50 outline-none resize-none transition-all placeholder:text-muted-foreground/50"
                   placeholder="Share your experience..."
+                  aria-label="Review comment"
                 />
               </div>
-              <Button type="submit" disabled={isSubmitting} className="w-full rounded-xl font-bold">
+              <Button type="submit" disabled={isSubmitting} className="w-full h-12 rounded-xl font-bold">
                 {isSubmitting ? "Submitting..." : "Submit Review"}
               </Button>
             </form>
@@ -112,38 +114,40 @@ export function ReviewSection({ productId, shopId, title = "Reviews" }: ReviewSe
 
         <div className="md:col-span-2 space-y-4">
           {isLoading ? (
-            <div className="space-y-4">
-              {[1, 2].map(i => (
-                <div key={i} className="h-32 bg-muted/20 animate-pulse rounded-2xl"></div>
-              ))}
+            <div className="py-20 flex flex-col items-center justify-center text-muted-foreground animate-in fade-in duration-500">
+              <Loader2 className="h-8 w-8 animate-spin mb-4 text-primary/50" />
+              <p className="font-medium">Loading reviews...</p>
             </div>
           ) : reviews.length === 0 ? (
-            <div className="text-center py-12 bg-muted/20 rounded-2xl border border-border/50 border-dashed">
-              <MessageSquare className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-              <p className="text-muted-foreground font-medium">No reviews yet. Be the first to review!</p>
+            <div className="text-center py-20 bg-surface rounded-3xl border border-border flex flex-col items-center justify-center animate-in fade-in duration-500">
+              <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mb-4">
+                <MessageSquare className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <p className="text-lg font-medium text-foreground mb-1">No reviews yet</p>
+              <p className="text-muted-foreground">Be the first to share your experience!</p>
             </div>
           ) : (
             <div className="space-y-4">
               {reviews.map((review) => (
-                <div key={review.id} className="p-5 rounded-2xl border border-border/50 bg-card shadow-sm">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">
-                        {review.user?.name?.charAt(0) || "U"}
+                <div key={review.id} className="p-6 rounded-2xl border border-border bg-surface shadow-sm animate-in slide-in-from-bottom-2 duration-500">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">
+                        {review.user?.name?.charAt(0)?.toUpperCase() || "U"}
                       </div>
                       <div>
-                        <p className="font-bold">{review.user?.name || "Anonymous User"}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(review.createdAt).toLocaleDateString()}
+                        <p className="font-bold text-foreground">{review.user?.name || "Anonymous User"}</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          {new Date(review.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
                         </p>
                       </div>
                     </div>
-                    <div className="flex gap-0.5">
+                    <div className="flex gap-1">
                       {renderStars(review.rating)}
                     </div>
                   </div>
                   {review.comment && (
-                    <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{review.comment}</p>
+                    <p className="text-foreground/90 mt-2 text-base leading-relaxed">{review.comment}</p>
                   )}
                 </div>
               ))}

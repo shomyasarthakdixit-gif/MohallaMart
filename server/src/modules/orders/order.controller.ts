@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { prisma } from "database";
+import { getPagination, getPagingData } from "../../utils/pagination";
 import { paymentService } from "../payments/payment.service";
 
 export const createOrder = async (req: Request, res: Response) => {
@@ -54,7 +55,7 @@ export const createOrder = async (req: Request, res: Response) => {
     }
 
     let grandTotal = 0;
-    const shopOrderData = [];
+    const shopOrderData: any[] = [];
 
     // 3. Prepare order data and calculate grand total
     for (const shopId of Object.keys(itemsByShop)) {
@@ -71,7 +72,8 @@ export const createOrder = async (req: Request, res: Response) => {
         });
       }
 
-      const shop = shopItems[0].product.shop;
+      if (shopItems.length === 0) continue;
+      const shop = shopItems[0]!.product.shop;
 
       // Delivery Radius Validation
       if (shop.latitude != null && shop.longitude != null && deliveryAddress.lat != null && deliveryAddress.lng != null) {
@@ -169,73 +171,90 @@ export const createOrder = async (req: Request, res: Response) => {
       }
     }
 
-    const createdOrders = [];
+    const createdOrders: any[] = [];
     
-    // 4. Create DB orders and deduct stock
-    for (const shopData of shopOrderData) {
-      // Pro-rata discount distribution
-      if (discountAmount > 0) {
-        const proportion = shopData.totalAmount / originalGrandTotal;
-        shopData.totalAmount -= (discountAmount * proportion);
-      }
+    // 4. Create DB orders and deduct stock securely via transaction
+    try {
+      await prisma.$transaction(async (tx) => {
+        for (const shopData of shopOrderData) {
+          // Pro-rata discount distribution
+          if (discountAmount > 0) {
+            const proportion = shopData.totalAmount / originalGrandTotal;
+            shopData.totalAmount -= (discountAmount * proportion);
+          }
 
-      // Deduct stock
-      for (const item of shopData.orderItemsData) {
-        await prisma.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } }
-        });
-      }
+          // Verify and Deduct stock atomically
+          for (const item of shopData.orderItemsData) {
+            const { count } = await tx.product.updateMany({
+              where: { 
+                id: item.productId,
+                stock: { gte: item.quantity }
+              },
+              data: { stock: { decrement: item.quantity } }
+            });
 
-      const order = await prisma.order.create({
-        data: {
-          userId,
-          shopId: shopData.shopId,
-          totalAmount: shopData.totalAmount,
-          deliveryType: deliveryType || "SCHEDULED",
-          status: "PENDING",
-          items: {
-            create: shopData.orderItemsData,
-          },
-          payment: {
-            create: {
-              amount: shopData.totalAmount,
-              method: paymentMethod || "CASH",
-              status: "PENDING",
-              providerOrderId: paymentOrder?.id || null,
+            if (count === 0) {
+              const product = await tx.product.findUnique({ where: { id: item.productId } });
+              throw new Error(`Insufficient stock for product: ${product?.name || item.productId}`);
             }
           }
-        },
-        include: { items: true }
-      });
-      createdOrders.push(order);
 
-      // Create Notification for Shopkeeper
-      const currentShopItems = itemsByShop[shopData.shopId];
-      const shopOwnerId = currentShopItems && currentShopItems.length > 0 ? currentShopItems[0].product.shop.ownerId : null;
-      if (shopOwnerId) {
-        await prisma.notification.create({
-          data: {
-            userId: shopOwnerId,
-            title: "New Order Received!",
-            message: `You have received a new order (₹${shopData.totalAmount}). Please check your dashboard.`,
-            type: "ORDER_UPDATE",
-            link: "/dashboard/orders"
+          const order = await tx.order.create({
+            data: {
+              userId,
+              shopId: shopData.shopId,
+              totalAmount: shopData.totalAmount,
+              deliveryType: deliveryType || "SCHEDULED",
+              status: "PENDING",
+              items: {
+                create: shopData.orderItemsData,
+              },
+              payment: {
+                create: {
+                  amount: shopData.totalAmount,
+                  method: paymentMethod || "CASH",
+                  status: "PENDING",
+                  providerOrderId: paymentOrder?.id || null,
+                }
+              }
+            },
+            include: { items: true }
+          });
+          createdOrders.push(order);
+
+          // Create Notification for Shopkeeper
+          const currentShopItems = itemsByShop[shopData.shopId];
+          const shopOwnerId = currentShopItems && currentShopItems.length > 0 ? currentShopItems[0]?.product?.shop?.ownerId : null;
+          if (shopOwnerId) {
+            await tx.notification.create({
+              data: {
+                userId: shopOwnerId,
+                title: "New Order Received!",
+                message: `You have received a new order (₹${shopData.totalAmount}). Please check your dashboard.`,
+                type: "ORDER_UPDATE",
+                link: "/dashboard/orders"
+              }
+            });
           }
-        });
-      }
-    }
+        }
 
-    // Deduct points
-    if (pointsToDeduct > 0) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { loyaltyPoints: { decrement: pointsToDeduct } }
+        // Deduct points
+        if (pointsToDeduct > 0) {
+          await tx.user.update({
+            where: { id: userId },
+            data: { loyaltyPoints: { decrement: pointsToDeduct } }
+          });
+        }
+
+        // Clear the cart
+        await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
       });
+    } catch (txError: any) {
+      if (txError.message && txError.message.includes("Insufficient stock")) {
+        return res.status(400).json({ success: false, message: txError.message });
+      }
+      throw txError;
     }
-
-    // 4. Clear the cart
-    await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
 
     res.status(201).json({ success: true, orders: createdOrders, paymentOrder });
   } catch (error) {
@@ -247,6 +266,8 @@ export const createOrder = async (req: Request, res: Response) => {
 export const getShopOrders = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
+    const { skip, take, page, limit } = getPagination(req);
+    
     if (!userId) {
       res.status(401).json({ success: false, message: "Unauthorized" });
       return;
@@ -262,20 +283,30 @@ export const getShopOrders = async (req: Request, res: Response) => {
       return;
     }
 
-    const orders = await prisma.order.findMany({
-      where: { shopId: shop.id },
-      include: {
-        user: { select: { name: true, phone: true } },
-        items: {
-          include: { product: true }
+    const where = { shopId: shop.id };
+    const [orders, totalItems] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        skip,
+        take,
+        include: {
+          user: { select: { name: true, phone: true } },
+          items: {
+            include: { product: true }
+          },
+          delivery: true,
+          payment: true,
         },
-        delivery: true,
-        payment: true,
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.order.count({ where })
+    ]);
 
-    res.json({ success: true, orders });
+    res.json({ 
+      success: true, 
+      orders,
+      pagination: getPagingData(totalItems, page, limit)
+    });
   } catch (error) {
     console.error("Error fetching shop orders:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
@@ -415,12 +446,12 @@ export const getShopAnalytics = async (req: Request, res: Response) => {
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = d.toISOString().split('T')[0] as string;
       chartDataMap[dateStr] = { date: dateStr, revenue: 0, orders: 0 };
     }
 
     orders.forEach(order => {
-      const dateStr = new Date(order.createdAt).toISOString().split('T')[0];
+      const dateStr = new Date(order.createdAt).toISOString().split('T')[0] as string;
       if (chartDataMap[dateStr]) {
         chartDataMap[dateStr].orders++;
         if (order.status !== 'REJECTED' && order.status !== 'CANCELLED') {
@@ -442,24 +473,36 @@ export const getShopAnalytics = async (req: Request, res: Response) => {
 export const getMyOrders = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
+    const { skip, take, page, limit } = getPagination(req);
+    
     if (!userId) {
       res.status(401).json({ success: false, message: "Unauthorized" });
       return;
     }
 
-    const orders = await prisma.order.findMany({
-      where: { userId },
-      include: {
-        shop: { select: { name: true, address: true, id: true } },
-        items: {
-          include: { product: true }
+    const where = { userId };
+    const [orders, totalItems] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        skip,
+        take,
+        include: {
+          shop: { select: { name: true, address: true, id: true } },
+          items: {
+            include: { product: true }
+          },
+          payment: true,
         },
-        payment: true,
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.order.count({ where })
+    ]);
 
-    res.json({ success: true, orders });
+    res.json({ 
+      success: true, 
+      orders,
+      pagination: getPagingData(totalItems, page, limit) 
+    });
   } catch (error) {
     console.error("Error fetching my orders:", error);
     res.status(500).json({ success: false, message: "Internal server error" });

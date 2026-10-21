@@ -1,18 +1,27 @@
 import { Request, Response } from "express";
 import { prisma } from "database";
+import { cache } from "../../utils/cache";
+import { getPagination, getPagingData } from "../../utils/pagination";
 
 export const getNearbyShops = async (req: Request, res: Response) => {
   try {
     const { lat, lng } = req.query;
+    const { skip, take, page, limit } = getPagination(req);
 
-    const shops = await prisma.shop.findMany({
-      where: { status: "APPROVED", isActive: true },
-      include: {
-        owner: {
-          select: { name: true, phone: true }
+    const CACHE_KEY = "approved_shops";
+    let shops: any = cache.get(CACHE_KEY);
+
+    if (!shops) {
+      shops = await prisma.shop.findMany({
+        where: { status: "APPROVED", isActive: true },
+        include: {
+          owner: {
+            select: { name: true, phone: true }
+          }
         }
-      }
-    });
+      });
+      cache.set(CACHE_KEY, shops);
+    }
 
     if (lat && lng) {
       const userLat = parseFloat(lat as string);
@@ -31,22 +40,30 @@ export const getNearbyShops = async (req: Request, res: Response) => {
           return R * c;
         };
 
-        const nearbyShops = shops.filter(shop => {
+        const nearbyShops = shops.filter((shop: any) => {
           if (shop.latitude == null || shop.longitude == null) return false;
           const distance = calculateDistance(userLat, userLng, shop.latitude, shop.longitude);
-          const radius = shop.deliveryRadius || 5; // default 5km
-          // Only return shops if the user is within their delivery radius
+          const radius = shop.deliveryRadius || 5; 
           return distance <= radius;
         });
 
-        // Take top 10 nearest
-        res.json({ success: true, shops: nearbyShops.slice(0, 10) });
+        const paginatedShops = nearbyShops.slice(skip, skip + take);
+        res.json({ 
+          success: true, 
+          shops: paginatedShops,
+          pagination: getPagingData(nearbyShops.length, page, limit)
+        });
         return;
       }
     }
     
     // Fallback if no location provided
-    res.json({ success: true, shops: shops.slice(0, 10) });
+    const paginatedShops = shops.slice(skip, skip + take);
+    res.json({ 
+      success: true, 
+      shops: paginatedShops,
+      pagination: getPagingData(shops.length, page, limit)
+    });
   } catch (error) {
     console.error("Error fetching shops:", error);
     res.status(500).json({ success: false, message: "Internal server error" });

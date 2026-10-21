@@ -126,11 +126,11 @@ export function GlobalSearch() {
         onClick={() => setIsOpen(true)}
         className="relative w-full max-w-2xl mx-auto group cursor-text"
       >
-        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+        <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
           <Search className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
         </div>
-        <div className="h-14 w-full bg-card border border-border/50 rounded-full flex items-center pl-12 pr-4 text-muted-foreground shadow-sm group-hover:shadow-md group-hover:border-primary/30 transition-all text-lg">
-          Search for groceries, shops...
+        <div className="h-14 w-full bg-surface border border-border rounded-full flex items-center pl-14 pr-4 text-muted-foreground shadow-sm group-hover:shadow-md group-hover:border-primary/50 transition-all text-base sm:text-lg">
+          Search groceries, shops, essentials...
           <div className="ml-auto hidden sm:flex items-center gap-1 text-xs font-medium bg-muted px-2 py-1 rounded-md opacity-70">
             <span className="text-[10px]">⌘</span>K
           </div>
@@ -235,7 +235,7 @@ export function GlobalSearch() {
                   </div>
                 ) : (
                   <div className="p-10 flex flex-col items-center justify-center text-muted-foreground/70 h-64">
-                    <p className="text-lg">No results found for "{query}"</p>
+                    <p className="text-lg">No results found for &quot;{query}&quot;</p>
                   </div>
                 )}
               </div>

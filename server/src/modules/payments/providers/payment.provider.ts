@@ -21,8 +21,17 @@ export interface RefundParams {
   amount?: number; // Optional, full refund if not provided
 }
 
+export interface WebhookEvent {
+  event: string;
+  orderId?: string;
+  paymentId?: string;
+  payload: any;
+}
+
 export interface PaymentProvider {
   createOrder(params: CreateOrderParams): Promise<PaymentOrder>;
   verifyPayment(params: VerifyPaymentParams): Promise<boolean>;
   refund(params: RefundParams): Promise<boolean>;
+  verifyWebhook(signature: string, body: string, secret?: string): boolean;
+  parseWebhookEvent(body: any): WebhookEvent | null;
 }

@@ -5,114 +5,128 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Crisp White Background */
-  --background: hsl(0 0% 100%);
-  --foreground: hsl(240 10% 3.9%);
+  /* MohallaMart 2.0 Light Theme */
+  --background: #F5F3EA;
+  --foreground: #20231F;
+  
+  --surface: #FFFDF8;
+  --surface-foreground: #20231F;
 
-  --card: hsl(0 0% 100%);
-  --card-foreground: hsl(240 10% 3.9%);
+  --card: #FFFDF8;
+  --card-foreground: #20231F;
 
-  --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(240 10% 3.9%);
+  --popover: #FFFDF8;
+  --popover-foreground: #20231F;
 
-  /* Vibrant Violet Primary */
-  --primary: hsl(262.1 83.3% 57.8%);
-  --primary-foreground: hsl(210 40% 98%);
+  --primary: #245C4A;
+  --primary-foreground: #FFFDF8;
+  --deep-green: #163D32;
 
-  /* Neon Cyan Secondary */
-  --secondary: hsl(192 95% 50%);
-  --secondary-foreground: hsl(240 5.9% 10%);
+  --secondary: #8A9A83;
+  --secondary-foreground: #FFFDF8;
 
-  --muted: hsl(240 4.8% 95.9%);
-  --muted-foreground: hsl(240 3.8% 46.1%);
+  --muted: #EBE8DE;
+  --muted-foreground: #6D746B;
 
-  --accent: hsl(240 4.8% 95.9%);
-  --accent-foreground: hsl(240 5.9% 10%);
+  --accent: #D8A63A;
+  --accent-foreground: #20231F;
 
-  --destructive: hsl(0 84.2% 60.2%);
-  --destructive-foreground: hsl(0 0% 98%);
+  --success: #3E7C59;
+  --success-foreground: #FFFDF8;
 
-  --border: hsl(240 5.9% 90%);
-  --input: hsl(240 5.9% 90%);
-  --ring: hsl(262.1 83.3% 57.8%);
+  --warning: #B98224;
+  --warning-foreground: #FFFDF8;
 
-  --radius: 1rem;
+  --destructive: #B64238;
+  --destructive-foreground: #FFFDF8;
 
-  --glass-bg: rgba(255, 255, 255, 0.65);
-  --glass-border: rgba(255, 255, 255, 0.4);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  --border: #DEDCD3;
+  --input: #DEDCD3;
+  --ring: #245C4A;
+
+  --radius: 0.75rem; /* 12px default */
 }
 
 .dark {
-  /* Deep Space Dark Mode */
-  --background: hsl(240 10% 3.9%);
-  --foreground: hsl(0 0% 98%);
+  /* MohallaMart 2.0 Dark Theme */
+  --background: #151B18;
+  --foreground: #F5F3EA;
 
-  --card: hsl(240 10% 3.9%);
-  --card-foreground: hsl(0 0% 98%);
+  --surface: #1D2823;
+  --surface-foreground: #F5F3EA;
 
-  --popover: hsl(240 10% 3.9%);
-  --popover-foreground: hsl(0 0% 98%);
+  --card: #1D2823;
+  --card-foreground: #F5F3EA;
+  
+  --elevated: #25332C;
 
-  --primary: hsl(262.1 83.3% 57.8%);
-  --primary-foreground: hsl(0 0% 98%);
+  --popover: #25332C;
+  --popover-foreground: #F5F3EA;
 
-  --secondary: hsl(192 95% 50%);
-  --secondary-foreground: hsl(240 5.9% 10%);
+  --primary: #6FA68D;
+  --primary-foreground: #151B18;
+  --deep-green: #0D1411;
 
-  --muted: hsl(240 3.7% 15.9%);
-  --muted-foreground: hsl(240 5% 64.9%);
+  --secondary: #B7C0B8;
+  --secondary-foreground: #151B18;
 
-  --accent: hsl(240 3.7% 15.9%);
-  --accent-foreground: hsl(0 0% 98%);
+  --muted: #25332C;
+  --muted-foreground: #B7C0B8;
 
-  --destructive: hsl(0 62.8% 30.6%);
-  --destructive-foreground: hsl(0 0% 98%);
+  --accent: #D8A63A;
+  --accent-foreground: #151B18;
 
-  --border: hsl(240 3.7% 15.9%);
-  --input: hsl(240 3.7% 15.9%);
-  --ring: hsl(262.1 83.3% 57.8%);
+  --success: #3E7C59;
+  --success-foreground: #F5F3EA;
 
-  --glass-bg: rgba(9, 9, 11, 0.65);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --warning: #B98224;
+  --warning-foreground: #151B18;
+
+  --destructive: #B64238;
+  --destructive-foreground: #F5F3EA;
+
+  --border: #34443B;
+  --input: #34443B;
+  --ring: #6FA68D;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-deep-green: var(--deep-green);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-elevated: var(--elevated);
   
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
 
-  --font-sans: var(--font-sans);
-  
-  --animate-gradient: gradient 8s linear infinite;
-  
-  @keyframes gradient {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
+  --font-sans: var(--font-manrope);
+  --font-serif: var(--font-instrument-serif);
 }
 
 @layer base {
@@ -122,33 +136,16 @@
   body {
     @apply bg-background text-foreground transition-colors duration-300;
   }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
 }
 
+/* Base custom styles to replace the old flashy glassmorphism */
 .glass {
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
+  @apply bg-surface/80 backdrop-blur-md border border-border shadow-sm;
 }
 
-.glow-primary {
-  box-shadow: 0 0 20px -5px var(--primary);
-}
-
-.glow-secondary {
-  box-shadow: 0 0 20px -5px var(--secondary);
-}
-
-.bg-gradient-premium {
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  background-size: 200% 200%;
-}
-
-.text-gradient-premium {
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  background-size: 200% 200%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.premium-card {
+  @apply bg-surface border border-border rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300;
 }
